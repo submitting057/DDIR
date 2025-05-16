@@ -249,9 +249,9 @@ class CZSL(nn.Module):
         loss_rep = loss_rep_subj1 + loss_rep_subj2 + loss_rep_task1 + loss_rep_task2
 
         # reconstruction
-        recon_sample = self.decoder(torch.concat((sample_ds, sample_dt), dim=1))
-        recon_same_subj = self.decoder(torch.concat((same_subj_ds, diff_task_dt), dim=1))
-        recon_same_task = self.decoder(torch.concat((diff_subj_ds, same_task_dt), dim=1))
+        recon_sample = self.decoder(sample_ds + sample_dt)
+        recon_same_subj = self.decoder(same_subj_ds + diff_task_dt)
+        recon_same_task = self.decoder(diff_subj_ds + same_task_dt)
 
         loss_rec = F.mse_loss(sample_feat.detach(), recon_sample) + F.mse_loss(same_subj_feat.detach(), recon_same_subj) + F.mse_loss(same_task_feat.detach(), recon_same_task)
 
@@ -281,7 +281,9 @@ class CZSL(nn.Module):
                 new_subj_feat[i] = subj_feat[subj_reshuffle_index[i]]
                 new_task_feat[i] = task_feat[task_reshuffle_index[i]]
 
-                new_comp[i] = self.decoder(torch.cat((new_subj_feat[i], new_task_feat[i]), dim=1))
+                noise = torch.randn(new_subj_feat[i].shape[0], new_subj_feat[i].shape[1], new_subj_feat[i].shape[2])
+
+                new_comp[i] = self.decoder(new_subj_feat[i] + new_task_feat[i] + noise)
 
                 loss_swap_subj += F.cross_entropy(self.clf_subj(self.disen_subj(new_comp[i])), subj_label[subj_reshuffle_index[i]])
                 loss_swap_task += F.cross_entropy(self.clf_task(self.disen_task(new_comp[i])), task_label[task_reshuffle_index[i]])
